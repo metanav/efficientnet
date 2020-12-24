@@ -62,9 +62,9 @@ DEFAULT_BLOCKS_ARGS = [
               expand_ratio=6, id_skip=True, strides=[2, 2], se_ratio=0.25),
     BlockArgs(kernel_size=5, num_repeat=3, input_filters=80, output_filters=112,
               expand_ratio=6, id_skip=True, strides=[1, 1], se_ratio=0.25),
-    BlockArgs(kernel_size=5, num_repeat=4, input_filters=112, output_filters=192,
+    BlockArgs(kernel_size=5, num_repeat=4, input_filters=112, output_filters=162,
               expand_ratio=6, id_skip=True, strides=[2, 2], se_ratio=0.25),
-    BlockArgs(kernel_size=3, num_repeat=1, input_filters=192, output_filters=320,
+    BlockArgs(kernel_size=3, num_repeat=1, input_filters=162, output_filters=320,
               expand_ratio=6, id_skip=True, strides=[1, 1], se_ratio=0.25)
 ]
 
@@ -115,6 +115,16 @@ def get_swish(**kwargs):
         return x * backend.sigmoid(x)
 
     return swish
+  
+def get_relu6(**kwargs):
+    backend, layers, models, keras_utils = get_submodules_from_kwargs(kwargs)
+
+    def relu6(x):
+        """ReLU activation function: max_value = 6
+        """
+        return backend.relu(x, max_value=6.)
+
+    return relu6
 
 
 def get_dropout(**kwargs):
@@ -161,7 +171,7 @@ def round_repeats(repeats, depth_coefficient):
 def mb_conv_block(inputs, block_args, activation, drop_rate=None, prefix='', ):
     """Mobile Inverted Residual Bottleneck."""
 
-    has_se = (block_args.se_ratio is not None) and (0 < block_args.se_ratio <= 1)
+    has_se = False #(block_args.se_ratio is not None) and (0 < block_args.se_ratio <= 1)
     bn_axis = 3 if backend.image_data_format() == 'channels_last' else 1
 
     # workaround over non working dropout with None in noise_shape in tf.keras
@@ -338,7 +348,7 @@ def EfficientNet(width_coefficient,
             img_input = input_tensor
 
     bn_axis = 3 if backend.image_data_format() == 'channels_last' else 1
-    activation = get_swish(**kwargs)
+    activation = get_relu6(**kwargs)
 
     # Build stem
     x = img_input
